@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tailzero Code — AI-Powered Code Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+Thai:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #05060d;
+    --deep: #0a0c1a;
+    --surface: #0f1120;
+    --card: #141728;
+    --border: rgba(120,130,255,0.12);
+    --accent: #c17f3c;
+    --accent2: #e8a84e;
+    --purple: #7c6af7;
+    --blue: #4da6ff;
+    --text: #e2e4f0;
+    --muted: #6b6d8a;
+    --fox: #e8893c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Noto Sans Thai', 'Space Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* Stars */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--d, 3s) ease-in-out infinite var(--delay, 0s);
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: var(--min-op, 0.2); transform: scale(1); }
+    50% { opacity: var(--max-op, 0.8); transform: scale(1.3); }
+  }
+
+  /* Nav */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 48px;
+    background: rgba(5,6,13,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--accent2); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+    font-family: 'Space Mono', monospace;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-badge {
+    background: rgba(124,106,247,0.15);
+    border: 0.5px solid rgba(124,106,247,0.3);
+    color: var(--purple);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.08em;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(193,127,60,0.1);
+    border: 0.5px solid rgba(193,127,60,0.25);
+    color: var(--accent2);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .eyebrow-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(48px, 8vw, 96px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+  .hero-title .fox { color: var(--fox); }
+  .hero-title .code {
+    background: linear-gradient(135deg, var(--purple), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: clamp(14px, 2vw, 18px);
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+    animation: fadeUp 0.6s ease 0.2s both;
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-weight: 300;
+  }
+  .hero-sub-en {
+    font-size: 13px;
+    color: rgba(107,109,138,0.6);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease 0.25s both;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.6s ease 0.3s both;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 14px 28px;
+    border-radius: 8px;
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-primary:hover {
+    background: var(--accent2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(193,127,60,0.3);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: var(--text);
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 14px 28px;
+    border-radius: 8px;
+    border: 0.5px solid var(--border);
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    border-color: rgba(120,130,255,0.3);
+    background: rgba(120,130,255,0.05);
+  }
+
+  .hero-meta {
+    margin-top: 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    animation: fadeUp 0.6s ease 0.4s both;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    opacity: 0.15;
+  }
+  .orb-1 {
+    width: 600px; height: 600px;
+    background: var(--purple);
+    top: -200px; left: -200px;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: var(--accent);
+    top: 100px; right: -100px;
+    opacity: 0.1;
+  }
+
+  /* Screenshot */
+  .screenshot-section {
+    position: relative;
+    z-index: 10;
+    padding: 0 24px 100px;
+    display: flex;
+    justify-content: center;
+  }
+  .screenshot-wrap {
+    position: relative;
+    max-width: 1000px;
+    width: 100%;
+  }
+  .screenshot-glow {
+    position: absolute;
+    inset: -2px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--purple), var(--accent), var(--blue));
+    opacity: 0.3;
+    filter: blur(20px);
+  }
+  .screenshot-frame {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 0.5px solid rgba(120,130,255,0.2);
+    background: var(--surface);
+  }
+  .screenshot-bar {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    background: #05060d;
+    border-bottom: 0.5px solid var(--border);
+    height: 32px;
+  }
+  .bar-title {
+    flex: 1;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding-left: 80px;
+  }
+  .win-controls {
+    display: flex;
+    height: 100%;
+  }
+  .win-btn {
+    width: 46px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    transition: background 0.15s;
+    cursor: default;
+  }
+  .win-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .win-btn.close:hover { background: #f06f6f; color: white; }
+  .win-btn svg { pointer-events: none; }
+  .screenshot-img {
+    width: 100%;
+    display: block;
+    background: var(--deep);
+    min-height: 400px;
+    object-fit: cover;
+  }
+
+  /* Mock screenshot */
+  .mock-editor {
+    display: flex;
+    height: 420px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+  }
+  .mock-sidebar {
+    width: 180px;
+    background: #0a0c1a;
+    border-right: 0.5px solid var(--border);
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mock-file {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .mock-file.active { background: rgba(193,127,60,0.1); color: var(--accent2); }
+  .mock-file.folder { color: var(--accent2); }
+  .mock-main { flex: 1; display: flex; flex-direction: column; }
+  .mock-tabs {
+    display: flex;
+    background: #05060d;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .mock-tab {
+    padding: 7px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    border-right: 0.5px solid var(--border);
+  }
+  .mock-tab.active {
+    color: var(--text);
+    background: #0f1120;
+    border-bottom: 1.5px solid var(--purple);
+  }
+  .mock-code {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+  .mock-ln {
+    padding: 12px 8px;
+    text-align: right;
+    color: #3a3b5d;
+    font-size: 11px;
+    line-height: 1.8;
+    border-right: 0.5px solid var(--border);
+    min-width: 36px;
+    user-select: none;
+  }
+  .mock-content {
+    flex: 1;
+    padding: 12px 16px;
+    line-height: 1.8;
+    color: #c8cae8;
+    font-size: 12px;
+  }
+  .kw { color: #7c6af7; }
+  .fn { color: #4da6ff; }
+  .str { color: #52d68a; }
+  .cm { color: #3a3b5d; }
+  .num { color: #e8a84e; }
+
+  /* Features */
+  .features {
+    position: relative;
+    z-index: 10;
+    padding: 80px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(28px, 4vw, 42px);
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .section-desc {
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 56px;
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-weight: 300;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .feature-card {
+    background: var(--card);
+    padding: 32px;
+    transition: background 0.2s;
+  }
+  .feature-card:hover { background: #191c32; }
+  .feature-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .feature-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .feature-title-en {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    letter-spacing: 0.08em;
+  }
+  .feature-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-weight: 300;
+  }
+
+  /* Download */
+  .download {
+    position: relative;
+    z-index: 10;
+    padding: 100px 24px;
+    text-align: center;
+  }
+  .download-card {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 0.5px solid rgba(193,127,60,0.2);
+    border-radius: 16px;
+    padding: 56px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .download-card::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: -80px;
+    width: 300px; height: 300px;
+    background: var(--accent);
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.08;
+    pointer-events: none;
+  }
+  .download-fox { font-size: 56px; margin-bottom: 24px; display: block; }
+  .download-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+  .download-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-weight: 300;
+  }
+  .download-meta {
+    margin-top: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .download-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* Roadmap */
+  .roadmap {
+    position: relative;
+    z-index: 10;
+    padding: 80px 24px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .roadmap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+  .roadmap-list::before {
+    content: '';
+    position: absolute;
+    left: 20px; top: 0; bottom: 0;
+    width: 0.5px;
+    background: var(--border);
+  }
+  .roadmap-item {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    padding: 24px 0;
+  }
+  .roadmap-dot {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+  }
+  .roadmap-dot.done {
+    background: rgba(82,214,138,0.15);
+    border: 0.5px solid rgba(82,214,138,0.3);
+    color: #52d68a;
+  }
+  .roadmap-dot.current {
+    background: rgba(193,127,60,0.15);
+    border: 0.5px solid rgba(193,127,60,0.3);
+    color: var(--accent2);
+  }
+  .roadmap-dot.upcoming {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    color: var(--muted);
+  }
+  .roadmap-content { flex: 1; padding-top: 8px; }
+  .roadmap-version {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .roadmap-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+  .roadmap-items {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-weight: 300;
+  }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 10;
+    border-top: 0.5px solid var(--border);
+    padding: 32px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .footer-left {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .footer-right {
+    display: flex;
+    gap: 24px;
+  }
+  .footer-right a {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-right a:hover { color: var(--text); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 640px) {
+    nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .download-card { padding: 40px 24px; }
+    footer { padding: 24px 20px; flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div class="stars" id="stars"></div>
+
+<!-- Nav -->
+<nav>
+  <a href="#" class="nav-logo">🦊 Tailzero <span>Code</span></a>
+  <ul class="nav-links">
+    <li><a href="#features">ฟีเจอร์</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#download">ดาวน์โหลด</a></li>
+    <li><span class="nav-badge">v0.1.0 PRE-RELEASE</span></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="hero-eyebrow">
+    <div class="eyebrow-dot"></div>
+    Early Access — Windows 64-bit
+  </div>
+
+  <h1 class="hero-title">
+    <span class="fox">Tailzero</span> <span class="code">Code</span>
+  </h1>
+
+  <p class="hero-sub">
+    โปรแกรมแก้ไขโค้ดที่เบา เร็ว และพร้อมต่อ AI<br>สร้างโดย developer เพื่อ developer
+  </p>
+  <p class="hero-sub-en">A lightweight, fast code editor built for the AI era</p>
+
+  <div class="hero-cta">
+    <a href="https://github.com/Void-Cycle/tailzero-code/releases/latest" class="btn-primary">
+      ⬇ ดาวน์โหลดฟรี
+    </a>
+    <a href="https://github.com/Void-Cycle/tailzero-code/releases" class="btn-secondary">
+      📋 ดู Changelog
+    </a>
+  </div>
+
+  <p class="hero-meta">Windows 10/11 · 64-bit · 1.94 MB · ฟรีตลอดกาล</p>
+</section>
+
+<!-- Screenshot -->
+<section class="screenshot-section">
+  <div class="screenshot-wrap">
+    <div class="screenshot-glow"></div>
+    <div class="screenshot-frame">
+      <div class="screenshot-bar">
+        <div class="bar-title">🦊 TailzeroCode — App.tsx</div>
+        <div class="win-controls">
+          <div class="win-btn">
+            <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+          </div>
+          <div class="win-btn">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor"/></svg>
+          </div>
+          <div class="win-btn close">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="mock-editor">
+        <div class="mock-sidebar">
+          <div class="mock-file folder">+ 🦊 tailzero-code</div>
+          <div class="mock-file" style="padding-left:20px">− 📂 src</div>
+          <div class="mock-file active" style="padding-left:36px">📄 App.tsx</div>
+          <div class="mock-file" style="padding-left:36px">📄 App.css</div>
+          <div class="mock-file" style="padding-left:36px">+ 📁 components</div>
+          <div class="mock-file" style="padding-left:20px">+ 📁 src-tauri</div>
+          <div class="mock-file">📄 package.json</div>
+          <div class="mock-file">📄 vite.config.ts</div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-tabs">
+            <div class="mock-tab active">App.tsx</div>
+            <div class="mock-tab">lib.rs</div>
+            <div class="mock-tab">App.css</div>
+          </div>
+          <div class="mock-code">
+            <div class="mock-ln">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16</div>
+            <div class="mock-content">
+              <span class="cm">// TailzeroCode — Fox Agent Core</span><br>
+              <span class="kw">import</span> { useState, useEffect } <span class="kw">from</span> <span class="str">"react"</span><br>
+              <span class="kw">import</span> { invoke } <span class="kw">from</span> <span class="str">"@tauri-apps/api/core"</span><br>
+              <br>
+              <span class="kw">interface</span> <span class="fn">Tab</span> {<br>
+              &nbsp;&nbsp;path: <span class="fn">string</span><br>
+              &nbsp;&nbsp;content: <span class="fn">string</span><br>
+              &nbsp;&nbsp;isDirty: <span class="fn">boolean</span><br>
+              }<br>
+              <br>
+              <span class="kw">function</span> <span class="fn">App</span>() {<br>
+              &nbsp;&nbsp;<span class="kw">const</span> [tabs, setTabs] = <span class="fn">useState</span>&lt;<span class="fn">Tab</span>[]&gt;([])<br>
+              &nbsp;&nbsp;<span class="kw">const</span> [activeTab, setActiveTab] = <span class="fn">useState</span>(<span class="num">0</span>)<br>
+              <br>
+              &nbsp;&nbsp;<span class="cm">// Fox Agent is watching... 🦊</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <p class="section-label">Features / ฟีเจอร์</p>
+  <p class="section-desc">เบา เร็ว และใช้งานง่าย — ไม่มี bloat ไม่มีของที่ไม่จำเป็น</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <span class="feature-icon">📁</span>
+      <div class="feature-title">File Explorer</div>
+      <div class="feature-title-en">VS CODE-STYLE FILE TREE</div>
+      <p class="feature-desc">เปิดโฟลเดอร์และดู file tree แบบ VS Code กางโฟลเดอร์ได้ แยก folder/ไฟล์ชัดเจน</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📄</span>
+      <div class="feature-title">Multi-Tab Editor</div>
+      <div class="feature-title-en">OPEN MULTIPLE FILES AT ONCE</div>
+      <p class="feature-desc">เปิดหลายไฟล์พร้อมกันด้วย tab system แสดง line number และสถานะ unsaved</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">💾</span>
+      <div class="feature-title">แก้ไขและบันทึก</div>
+      <div class="feature-title-en">EDIT & SAVE WITH CTRL+S</div>
+      <p class="feature-desc">แก้ไขโค้ดได้โดยตรง บันทึกด้วย Ctrl+S รองรับทุกภาษา undo/redo ครบ</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⚡</span>
+      <div class="feature-title">เบาและเร็ว</div>
+      <div class="feature-title-en">LIGHTWEIGHT — ONLY 1.94 MB</div>
+      <p class="feature-desc">สร้างด้วย Tauri + Rust ขนาดแค่ 1.94 MB เปิดเร็ว ใช้ RAM น้อยกว่า Electron 10 เท่า</p>
+    </div>
+  </div>
+</section>
+
+<!-- Roadmap -->
+<section class="roadmap" id="roadmap">
+  <p class="section-label">Roadmap</p>
+  <h2 class="section-title" style="text-align:center;margin-bottom:8px">แผนการพัฒนา</h2>
+  <p class="section-desc" style="margin-bottom:48px">กำลังพัฒนาต่อเนื่อง — เวอร์ชันใหม่ทุก sprint</p>
+
+  <div class="roadmap-list">
+    <div class="roadmap-item">
+      <div class="roadmap-dot done">✓</div>
+      <div class="roadmap-content">
+        <div class="roadmap-version">v0.1.0 — มีนาคม 2026</div>
+        <div class="roadmap-title">Initial Release 🎉</div>
+        <div class="roadmap-items">File explorer · Multi-tab editor · แก้ไขและบันทึกไฟล์ · Line number</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot current">→</div>
+      <div class="roadmap-content">
+        <div class="roadmap-version">v0.2.0 — เร็วๆ นี้</div>
+        <div class="roadmap-title">Terminal + File Management</div>
+        <div class="roadmap-items">Terminal ในตัว · เพิ่ม/ลบไฟล์และโฟลเดอร์ · รัน command ได้เลย</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot upcoming">0.3</div>
+      <div class="roadmap-content">
+        <div class="roadmap-version">v0.3.0</div>
+        <div class="roadmap-title">Syntax Highlighting + Settings</div>
+        <div class="roadmap-items">Syntax highlighting · ปรับ theme · ตั้งค่า font size · App icon</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot upcoming">0.4</div>
+      <div class="roadmap-content">
+        <div class="roadmap-version">v0.4.0</div>
+        <div class="roadmap-title">Fox Agent AI 🦊</div>
+        <div class="roadmap-items">AI อ่านและเข้าใจโค้ดในโปรเจกต์ · แชทกับ AI เกี่ยวกับโค้ดได้เลย</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot upcoming">0.5</div>
+      <div class="roadmap-content">
+        <div class="roadmap-version">v0.5.0</div>
+        <div class="roadmap-title">Agent Mode</div>
+        <div class="roadmap-items">AI เขียนและแก้ไขโค้ดเองได้ · รัน command อัตโนมัติ · Task automation</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Download -->
+<section class="download" id="download">
+  <div class="download-card">
+    <span class="download-fox">🦊</span>
+    <h2 class="download-title">ดาวน์โหลดฟรี</h2>
+    <p class="download-sub">ติดตั้งง่าย ใช้งานได้ทันที ไม่ต้องสมัครสมาชิก<br>
+    <span style="font-family:'Space Mono',monospace;font-size:11px;color:rgba(107,109,138,0.6)">Free forever. No account required.</span></p>
+    <a href="https://github.com/Void-Cycle/tailzero-code/releases/latest" class="btn-primary" style="font-size:15px;padding:16px 36px">
+      ⬇ Download for Windows
+    </a>
+    <div class="download-meta">
+      <span>🪟 Windows 10/11</span>
+      <span>📦 1.94 MB</span>
+      <span>🔓 Free & Open</span>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-left">
+    © 2026 Voidcycle · Tailzero Code v0.1.0<br>
+    Fox icon by Google Fonts (Noto Emojis) — Apache License 2.0
+  </div>
+  <div class="footer-right">
+    <a href="https://github.com/Void-Cycle/tailzero-code">GitHub</a>
+    <a href="https://github.com/Void-Cycle/tailzero-code/releases">Releases</a>
+    <a href="https://github.com/Void-Cycle/tailzero-code/issues">Report Bug</a>
+  </div>
+</footer>
+
+<script>
+// Generate stars
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 150; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() < 0.1 ? 2.5 : Math.random() < 0.3 ? 1.5 : 1;
+  s.style.cssText = `
+    left: ${Math.random()*100}%;
+    top: ${Math.random()*100}%;
+    width: ${size}px;
+    height: ${size}px;
+    --d: ${2 + Math.random()*4}s;
+    --delay: ${Math.random()*5}s;
+    --min-op: ${0.05 + Math.random()*0.15};
+    --max-op: ${0.4 + Math.random()*0.5};
+  `;
+  starsEl.appendChild(s);
+}
+</script>
+</body>
+</html>
